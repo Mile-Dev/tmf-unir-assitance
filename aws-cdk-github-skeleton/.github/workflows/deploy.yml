@@ -1,0 +1,61 @@
+name: cdk-deploy
+
+on:
+  push:
+    branches: [ "main", "qa", "dev" ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install CDK deps
+        working-directory: infra
+        run: npm ci
+
+      - name: Determine environment from branch
+        id: envname
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          if [ "$BRANCH" = "main" ]; then echo "ENV=prod" >> $GITHUB_OUTPUT;
+          elif [ "$BRANCH" = "qa" ]; then echo "ENV=qa" >> $GITHUB_OUTPUT;
+          else echo "ENV=dev" >> $GITHUB_OUTPUT; fi
+
+      - name: CDK synth
+        working-directory: infra
+        run: npm run synth -c env=${{ steps.envname.outputs.ENV }}
+        env:
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: CDK deploy
+        working-directory: infra
+        run: npm run deploy -c env=${{ steps.envname.outputs.ENV }}
+        env:
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}

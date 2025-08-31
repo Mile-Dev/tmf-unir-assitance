@@ -1,0 +1,20 @@
+{
+  "name": "infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "synth": "npm run build && cdk synth",
+    "deploy": "npm run build && cdk deploy --all --require-approval never",
+    "diff": "npm run build && cdk diff"
+  },
+  "devDependencies": {
+    "aws-cdk-lib": "2.152.0",
+    "constructs": "10.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "@aws-cdk/aws-lambda-dotnet-alpha": "2.152.0-alpha.0"
+  }
+}

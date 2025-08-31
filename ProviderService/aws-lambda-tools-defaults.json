@@ -1,0 +1,21 @@
+
+{
+    "profile" : "aws-terraMilena",
+    "region"  : "us-east-2",
+    "configuration" : "Release",
+    "framework"     : "net8.0",
+    "function-name" : "LambdaProvider",
+    "function-description" : "This is Api Minimal deploy in Lamba with contain methods CRUD",
+    "package-type"         : "Zip",
+    "function-handler"     : "ProviderService",
+    "function-memory-size" : 1024,
+    "function-role"        : "arn:aws:iam::590183946089:role/lambda_exec_LambdaProvider",
+    "function-timeout"     : 10,
+    "function-runtime"     : "dotnet8",
+    "function-architecture" : "x86_64",
+    "function-subnets"      : "",
+    "function-security-groups" : "",
+    "tracing-mode"             : "PassThrough",
+    "environment-variables"    : "",
+    "image-tag"                : ""
+}

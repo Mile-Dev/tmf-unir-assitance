@@ -1,0 +1,22 @@
+
+{
+    "region" : "us-east-2",
+    "profile" : "aws-terraMilena",
+    "configuration" : "Release",
+    "framework"     : "net8.0",
+    "function-name" : "LambdaVoucher",
+    "function-description" : "The api minimal execute the Get Voucher",
+    "package-type"         : "Zip",
+    "function-handler"     : "VoucherService",
+    "function-memory-size" : 1024,
+    "function-role"        : "arn:aws:iam::590183946089:role/lambda_exec_LambdaVoucher",
+    "function-timeout"     : 30,
+    "function-runtime"     : "dotnet8",
+    "function-architecture" : "x86_64",
+    "function-subnets"      : "",
+    "function-security-groups" : "",
+    "tracing-mode"             : "PassThrough",
+    "environment-variables"    : "",
+    "dockerfile"               : "Dockerfile",
+    "image-tag"                : ""
+}

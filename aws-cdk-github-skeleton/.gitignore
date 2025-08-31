@@ -1,0 +1,18 @@
+# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Do NOT commit real configs
+**/appsettings*.json
+!**/appsettings.sample.json
+
+# CDK context/cache
+infra/cdk.out/
+infra/node_modules/
+
+# Misc
+.idea/
+.DS_Store

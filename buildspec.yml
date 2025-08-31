@@ -1,0 +1,467 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      # CodeBuild hace un 'clone' superficial. Necesitamos el historial completo para comparar commits.
+      - git fetch --unshallow || echo "No es un repositorio completo, continuando..."
+      - echo "Instalando dependencias del proyecto CDK..."
+      - cd @infra
+      - npm ci
+      - npm install -g aws-cdk
+      - cdk --version
+      - cd ..
+
+  build:
+    commands:
+      - echo "Detectando cambios desde el último commit..."
+      - CHANGED_FILES=$(git diff --name-only HEAD HEAD~1)
+      - echo "Archivos modificados:"
+      - echo "$CHANGED_FILES"
+
+      - PROJECT="asistencia-viajero"
+      - STAGE="dev"
+
+      # --- Lógica de Despliegue Condicional por Stack ---
+
+      # 1. Networking Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-NetworkingStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/networking/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 2. Database Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-DatabaseStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/database/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 3. Cognito Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-CognitoStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/cognito/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 4. WAF Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-WafStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/waf/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 5. S3 Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-S3Stack"
+        STACK_PATH_PATTERN="@infra/lib/stack/s3/"
+        ICD10_FILE_PATH="@infra/files/Origen_Datos_ICD10.csv"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN")|| \
+             (echo "$CHANGED_FILES" | grep -q "$ICD10_FILE_PATH"); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 6. DynamoDB Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-DynamoStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/dynamo/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 7. Lambda Layers Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-LambdaLayersStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/layers/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/src/layers/"); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 9. PythonLambdasStack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-PythonLambdasStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "AssistancesLoggerWriterLambda/") || \
+             (echo "$CHANGED_FILES" | grep -q "ListUsersLambda/") || \
+             (echo "$CHANGED_FILES" | grep -q "AssistancesLoggerWritterExternalLambda/") || \
+             (echo "$CHANGED_FILES" | grep -q "TrackingMokLambda/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/python-lambdas-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 8. SQS Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-SqsStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/sqs/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 11. MasterRdsServices
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-MasterRdsServicesStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "MasterRdsServices/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/master-rds-services-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 12. EventServices
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-EventServicesStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "EventServices/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/event-services-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 13. ProviderService
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-ProviderServiceStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "ProviderService/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/provider-service-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 14. IssuanceMokServices
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-IssuanceMokServicesStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "IssuanceMokServices/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/issuance-mok-services-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 15. TrackingMokServices
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-TrackingMokServicesStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "TrackingMokServices/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/tracking-mok-services-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 16. PhoneConsultationService
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-PhoneConsultationServiceStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "PhoneConsultationService/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/phone-consultation-service-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 17. VoucherService
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-VoucherServiceStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "VoucherService/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/voucher-service-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 18. EventStatusSwitchTempServices
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-lambda-EventStatusSwitchTempServicesStack"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "EventStatusSwitchTempServices/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/services/event-status-switch-temp-services-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 19. Statemachine Stack
+      - |
+        SHOULD_DEPLOY=false
+        STACK_NAME="${PROJECT}-StatemachineStack"
+        STACK_PATH_PATTERN="@infra/lib/stack/statemachines/"
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif echo "$CHANGED_FILES" | grep -q "$STACK_PATH_PATTERN"; then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+      # 20. MainStack (Stack principal que conecta todo)
+      - |
+        SHOULD_DEPLOY=true
+        STACK_NAME="${PROJECT}-MainStack"
+        # Este stack puede cambiar por múltiples razones, así que la lista de patrones es más larga
+        if ! aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1; then
+          echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        elif (echo "$CHANGED_FILES" | grep -q "@infra/lib/stack/endpoints/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/src/lambdas/authorizer/") || \
+             (echo "$CHANGED_FILES" | grep -q "@infra/lib/main-stack.ts" ); then
+          echo "Cambios detectados en $STACK_NAME. Marcando para despliegue."
+          SHOULD_DEPLOY=true
+        else
+          echo "Sin cambios en $STACK_NAME. Omitiendo despliegue."
+        fi
+        if [ "$SHOULD_DEPLOY" = true ]; then
+          echo "--- DESPLEGANDO ${STACK_NAME} ---"
+          cd @infra
+          npx cdk deploy -e "$STACK_NAME" --require-approval never
+          if [ $? -ne 0 ]; then echo "ERROR: Falló el despliegue de ${STACK_NAME}"; exit 1; fi
+          cd ..
+        fi
+
+artifacts:
+  files:
+    - "**/*"
+  paths:
+    - "@infra/node_modules/**/*"
+    - "@infra/cdk.out/**/*"
+cache:
+  paths:
+    - "@infra/node_modules/**/*"
+    - "@infra/cdk.staging/**/*"
+    - "/root/.nuget/packages/**/*"
+    - "node_modules/**/*"
+    - "@infra//root/.nuget/packages/**/*"

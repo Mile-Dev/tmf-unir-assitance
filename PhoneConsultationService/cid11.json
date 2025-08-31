@@ -1,0 +1,14 @@
+[
+    { "code": "7B2Y", "description": "Otros trastornos especificados del sueño y la vigilia" },
+    { "code": "7B2Z", "description": "Trastornos del sueño y la vigilia, sin especificación" },
+    { "code": "2A00", "description": "Neoplasias primarias de cerebro" },
+    { "code": "2A01", "description": "Neoplasias primarias de las meninges" },
+    { "code": "2A02", "description": "Neoplasia primaria de la médula espinal, los nervios craneales u otras partes del sistema nervioso central" },
+    { "code": "2E60", "description": "Carcinoma in situ de la cavidad bucal, el esófago o el estómago" },
+    { "code": "2E61", "description": "Carcinoma in situ de otros órganos o de los órganos digestivos no especificados" },
+    { "code": "2E62", "description": "Carcinoma in situ del oído medio o del aparato respiratorio" },
+    { "code": "2E68", "description": "Carcinoma in situ de la vejiga" },
+    { "code": "NA00", "description": "Traumatismo superficial en la cabeza" },
+    { "code": "NA02", "description": "Fractura del cráneo o de los huesos faciales" },
+    { "code": "NA03", "description": "Luxación, distensión o esguince de articulaciones o ligamentos de la cabeza" }
+]

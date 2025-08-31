@@ -1,0 +1,22 @@
+
+{
+    "region" : "us-east-2",
+    "profile" : "aws-terraMilena",
+    "configuration" : "Release",
+    "framework"     : "net8.0",
+    "function-name" : "LambdaPhoneConsultation",
+    "function-description" : "This is Api Minimal deploy in Lamba with contain methods CRUD",
+    "package-type"         : "Zip",
+    "function-handler"     : "PhoneConsultationService",
+    "function-memory-size" : 1024,
+    "function-role"        : "arn:aws:iam::590183946089:role/RoleApiLambdaPhoneConsultationDev",
+    "function-timeout"     : 30,
+    "function-runtime"     : "dotnet8",
+    "function-architecture" : "x86_64",
+    "function-subnets"      : "",
+    "function-security-groups" : "",
+    "tracing-mode"             : "PassThrough",
+    "environment-variables"    : "\"AWS__S3__UrlExpirationMinutes\"=\"10\"",
+    "dockerfile"               : "Dockerfile",
+    "image-tag"                : ""
+}
