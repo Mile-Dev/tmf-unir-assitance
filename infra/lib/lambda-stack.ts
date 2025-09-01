@@ -74,7 +74,7 @@ export class LambdaStack extends cdk.Stack {
     const rootProxy = api.root.addResource('{proxy+}');
     rootProxy.addMethod('ANY', lambdaIntegration);
     api.root.addMethod('ANY', lambdaIntegration);
-
+    //prueba
     new CfnOutput(this, 'ApiUrl', { value: api.urlForPath('/') });
   }
 }
