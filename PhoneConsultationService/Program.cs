@@ -35,9 +35,9 @@ builder.Services.AddSwaggerGen();
 // Configure AWS options
 var awsOptions = builder.Configuration.GetAWSOptions();
 builder.Services.AddDefaultAWSOptions(awsOptions);
-builder.Services.AddAWSService<IAmazonDynamoDB>();
+builder.Services.AddAWSService<AmazonDynamoDBClient>();
 builder.Services.AddScoped<IDynamoDBContext, DynamoDBContext>();
-builder.Services.AddAWSService<IAmazonS3>();
+builder.Services.AddAWSService<AmazonS3Client>();
 
 // Registrar el servicio de S3 en la inyeccion de dependencias
 builder.Services.AddScoped<IS3Service, S3Service>();
