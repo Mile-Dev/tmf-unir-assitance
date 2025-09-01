@@ -47,12 +47,44 @@ jobs:
 
       # Bootstrap (idempotente: no falla si ya existe)
       - name: CDK Bootstrap
+        working-directory: ./infra
         run: |
-          cd infra
-          npx cdk bootstrap aws://590183946089/us-west-1 || true
-
+          # Verificar que el archivo existe antes de hacer bootstrap
+          echo "Current directory: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of bin directory:"
+          ls -la bin/
+          echo "Checking cdk.json:"
+          cat cdk.json
+          
+          if [ -f "bin/infra.ts" ]; then
+            echo "Found bin/infra.ts, proceeding with bootstrap"
+            npx cdk bootstrap aws://590183946089/us-west-1 || true
+          else
+            echo "Error: bin/infra.ts not found"
+            exit 1
+          fi
+          
+      # Limpiar stack fallido si existe
+      - name: Clean failed stack
+        working-directory: ./infra
+        run: |
+          echo "Checking for existing failed stack..."
+          npx cdk destroy tw-dev-phone -c env=dev --force || echo "No stack to destroy or destroy failed, continuing..."
+          
+          # Esperar un poco para que AWS procese la eliminación
+          sleep 10
       # Deploy
       - name: CDK Deploy PhoneConsultationService
+        working-directory: ./infra
         run: |
-          cd infra
-          npx cdk deploy tw-dev-phone -c env=dev --require-approval never
+          echo "Current directory: $(pwd)"
+          if [ -f "bin/infra.ts" ]; then
+            echo "Found bin/infra.ts, proceeding with deployment"
+            npx cdk deploy tw-dev-phone -c env=dev --require-approval never
+          else
+            echo "Error: bin/infra.ts not found"
+            ls -la bin/
+            exit 1
+          fi
