@@ -61,7 +61,7 @@ export class LambdaStack extends cdk.Stack {
       deployOptions: {
         stageName: envName,
         metricsEnabled: true,
-        loggingLevel: apigw.MethodLoggingLevel.INFO,
+        loggingLevel: apigw.MethodLoggingLevel.OFF,
         dataTraceEnabled: false,
       },
       defaultCorsPreflightOptions: {
