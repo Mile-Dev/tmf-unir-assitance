@@ -1,0 +1,58 @@
+name: Deploy PhoneConsultationService Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write 
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Publicar PhoneConsultationService
+      - name: Publish PhoneConsultationService
+        run: dotnet publish PhoneConsultationService/PhoneConsultationService.csproj -c Release -o PhoneConsultationService/bin/Release/net8.0/publish
+
+      # Configurar Node (para CDK)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install CDK and deps
+        run: |
+          npm install -g aws-cdk
+          cd infra
+          npm ci
+
+      # Configurar credenciales AWS vía OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-west-1
+
+      # Bootstrap (idempotente: no falla si ya existe)
+      - name: CDK Bootstrap
+        run: |
+          cd infra
+          npx cdk bootstrap aws://590183946089/us-west-1 || true
+
+      # Deploy
+      - name: CDK Deploy PhoneConsultationService
+        run: |
+          cd infra
+          npx cdk deploy tw-dev-phone -c env=dev --require-approval never
