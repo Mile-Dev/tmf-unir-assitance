@@ -16,13 +16,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Variables de entorno inyectadas por CDK en la Lambda:
 var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "DEV";   
 var serviceName = Environment.GetEnvironmentVariable("SERVICE_NAME") ?? "PhoneConsultationService";
-var regionName = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";      
+var regionName = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-west-1";      
 var prefix = Environment.GetEnvironmentVariable("CONFIG_PREFIX") ?? $"/tw/{envName}/{serviceName}/";
+
+// Región AWS para el provider de Systems Manager
+var awsOpts = new AWSOptions { Region = RegionEndpoint.GetBySystemName(regionName) };
 
 // 1) Config base opcional (solo útil en local) + env vars
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true)
-    .AddEnvironmentVariables();
+    .AddEnvironmentVariables()
+    .AddSystemsManager(prefix, awsOpts);
 
 
 // Configure AWS Lambda Hosting
