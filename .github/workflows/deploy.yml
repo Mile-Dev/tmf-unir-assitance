@@ -12,7 +12,7 @@ jobs:
     env:
       PROJECT: asistencia-viajero
       STAGE: dev
-      AWS_REGION: us-east-1 # Ajusta tu región
+      AWS_REGION: us-west-1 
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -20,7 +20,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necesario para obtener historial y comparar cambios
+          fetch-depth: 0 
+          
+      - name: Generar archivo dev.json
+        run: |
+          mkdir -p @infra/config
+          echo '${{ secrets.DEV_CONFIG_JSON }}' > @infra/config/dev.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

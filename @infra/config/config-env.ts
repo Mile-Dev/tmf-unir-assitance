@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-export type AwsRegion = "us-east-1" | "us-west-2";
+export type AwsRegion = "us-west-1" | "us-west-2";
 
 export interface IConfigEnv {
   account: string;
