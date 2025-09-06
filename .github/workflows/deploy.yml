@@ -33,6 +33,11 @@ jobs:
           npm install -g aws-cdk
           cdk --version
 
+      - name: Install AWS CDK compatible version
+        run: |
+          npm install -g aws-cdk@2.1029.0
+          cdk --version
+
       - name: Detect changed files
         id: changes
         run: |
