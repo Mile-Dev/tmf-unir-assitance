@@ -48,6 +48,26 @@ jobs:
           mkdir -p config
           echo '${{ secrets.DEV_CONFIG_JSON }}' > config/dev.json
 
+      - name: Crear appsettings para Lambdas
+        run: |
+          mkdir -p MasterRdsServices
+          echo '${{ secrets.APPSETTINGS_MASTER_RDS_JSON }}' > MasterRdsServices/appsettings.json
+         
+          mkdir -p EventServices
+          echo '${{ secrets.APPSETTINGS_EVENT_JSON }}' > SharedServices/appsettings.json
+
+          mkdir -p PhoneConsultationService
+          echo '${{ secrets.APPSETTINGS_PHONE_JSON }}' > SharedServices/appsettings.json
+
+          mkdir -p ProviderService
+          echo '${{ secrets.APPSETTINGS_PROVIDER_JSON }}' > SharedServices/appsettings.json
+
+          mkdir -p TrackingMokServices
+          echo '${{ secrets.APPSETTINGS_TRACKING_JSON }}' > SharedServices/appsettings.json
+
+          mkdir -p VoucherService
+          echo '${{ secrets.APPSETTINGS_VOUCHER_JSON }}' > SharedServices/appsettings.json
+
       - name: Deploy CDK Stacks
         run: |
           echo "Archivos detectados para análisis: $CHANGED_FILES"
