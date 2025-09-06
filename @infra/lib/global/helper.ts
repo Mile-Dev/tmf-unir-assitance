@@ -18,8 +18,8 @@ export function output(context: Construct, id: string, value: CfnOutputProps) {
  * @param text - string to lowercase
  * @returns {string}
  */
-export function toLow(text: string): string {
-    return text.toLowerCase()
+export function toLow(text?: string) {
+  return (text ?? '').toLowerCase();
 }
 
 
