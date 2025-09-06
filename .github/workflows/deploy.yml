@@ -21,11 +21,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 
-          
+
       - name: Generar archivo dev.json
         run: |
-          mkdir -p @infra/config
-          echo '${{ secrets.DEV_CONFIG_JSON }}' > @infra/config/dev.json
+          cd @infra
+          mkdir -p config
+          echo '${{ secrets.DEV_CONFIG_JSON }}' > config/dev.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
