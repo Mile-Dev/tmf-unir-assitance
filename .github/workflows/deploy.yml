@@ -1,58 +1,101 @@
-name: Deploy PhoneConsultationService Lambda
+name: Deploy Infra to AWS
 
 on:
   push:
     branches:
-      - main
-
+      - main 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write 
-      contents: read
+    env:
+      PROJECT: asistencia-viajero
+      STAGE: dev
+      AWS_REGION: us-west-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          fetch-depth: 0 
 
-      # Publicar PhoneConsultationService
-      - name: Publish PhoneConsultationService
-        run: dotnet publish PhoneConsultationService/PhoneConsultationService.csproj -c Release -o PhoneConsultationService/bin/Release/net8.0/publish
-
-      # Configurar Node (para CDK)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 22
 
-      - name: Install CDK and deps
+      - name: Install dependencies
         run: |
-          npm install -g aws-cdk
-          cd infra
+          cd @infra
           npm ci
+          npm install -g aws-cdk
+          cdk --version
+          cd ..
 
-      # Configurar credenciales AWS vía OIDC
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Detect changed files
+        id: changes
+        run: |
+          echo "CHANGED_FILES=$(git diff --name-only HEAD HEAD~1)" >> $GITHUB_ENV
+
+      - name: Deploy CDK Stacks
+        run: |
+          CHANGED_FILES="$CHANGED_FILES"
+          echo "Archivos modificados:"
+          echo "$CHANGED_FILES"
+
+          # Declaración de stacks y sus patrones relevantes
+          declare -A STACKS
+          STACKS["NetworkingStack"]="@infra/lib/stack/networking/"
+          STACKS["DatabaseStack"]="@infra/lib/stack/database/"
+          STACKS["CognitoStack"]="@infra/lib/stack/cognito/"
+          STACKS["WafStack"]="@infra/lib/stack/waf/"
+          STACKS["S3Stack"]="@infra/lib/stack/s3/ @infra/files/Origen_Datos_ICD10.csv"
+          STACKS["DynamoStack"]="@infra/lib/stack/dynamo/"
+          STACKS["LambdaLayersStack"]="@infra/lib/stack/layers/ @infra/src/layers/"
+          STACKS["StatemachineStack"]="@infra/lib/stack/statemachines/"
+          STACKS["MainStack"]="@infra/lib/stack/endpoints/ @infra/src/lambdas/authorizer/ @infra/lib/main-stack.ts"
+
+          for STACK_KEY in "${!STACKS[@]}"; do
+            STACK_NAME="${PROJECT}-${STACK_KEY}"
+            PATTERNS="${STACKS[$STACK_KEY]}"
+
+            SHOULD_DEPLOY=false
+
+            if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&1; then
+              echo "Stack $STACK_NAME no existe. Marcando para despliegue."
+              SHOULD_DEPLOY=true
+            else
+              # Verificar cambios en los patrones
+              for pattern in $PATTERNS; do
+                if echo "$CHANGED_FILES" | grep -q "$pattern"; then
+                  echo "Cambios detectados para $STACK_NAME (patrón: $pattern)"
+                  SHOULD_DEPLOY=true
+                  break
+                fi
+              done
+            fi
+
+            if [ "$SHOULD_DEPLOY" = true ]; then
+              echo "--- DESPLEGANDO ${STACK_NAME} ---"
+              cd @infra
+              npx cdk deploy -e "$STACK_NAME" --require-approval never
+              if [ $? -ne 0 ]; then
+                echo "ERROR: Falló el despliegue de ${STACK_NAME}"
+                exit 1
+              fi
+              cd ..
+            else
+              echo "Sin cambios relevantes para $STACK_NAME. Omitiendo despliegue."
+            fi
+          done
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: us-west-1
-
-      # Bootstrap (idempotente: no falla si ya existe)
-      - name: CDK Bootstrap
-        run: |
-          cd infra
-          npx cdk bootstrap aws://590183946089/us-west-1 || true
-
-      # Deploy
-      - name: CDK Deploy PhoneConsultationService
-        run: |
-          cd infra
-          npx cdk deploy tw-dev-phone -c env=dev --require-approval never
+          path: |
+            @infra/node_modules
+            @infra/cdk.staging
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
