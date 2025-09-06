@@ -189,8 +189,8 @@ const eventStatusSwitchTempServicesStack =  new EventStatusSwitchTempServicesSta
   lambdaSg: lambdaSg,
 });
 
-
-new MainStack(app, `${vars.project}-MainStack`, {
+const project = process.env.PROJECT || 'asistencia-viajero';
+new MainStack(app, `${project}-MainStack`, {
   userPool: cognitoStack.userPool,
   ...baseProps,
   userPoolId: cognitoStack.userPoolId,
