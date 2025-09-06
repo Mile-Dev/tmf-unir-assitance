@@ -68,6 +68,9 @@ jobs:
           mkdir -p VoucherService
           echo '${{ secrets.APPSETTINGS_VOUCHER_JSON }}' > VoucherService/appsettings.dev.json
 
+           mkdir -p IssuanceMokServices
+          echo '${{ secrets.APPSETTINGS_ISSUANCE_JSON }}' > IssuanceMokServices/appsettings.dev.json
+
       - name: Deploy CDK Stacks
         run: |
           echo "Archivos detectados para análisis: $CHANGED_FILES"
