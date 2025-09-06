@@ -3,16 +3,15 @@ name: Deploy Infra to AWS
 on:
   push:
     branches:
-      - main # Ajusta según tu rama de despliegue
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     env:
       PROJECT: asistencia-viajero
       STAGE: dev
-      AWS_REGION: us-west-1 
+      AWS_REGION: us-west-1
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -20,13 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
-
-      - name: Generar archivo dev.json
-        run: |
-          cd @infra
-          mkdir -p config
-          echo '${{ secrets.DEV_CONFIG_JSON }}' > config/dev.json
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,21 +32,25 @@ jobs:
           npm ci
           npm install -g aws-cdk
           cdk --version
-          cd ..
 
       - name: Detect changed files
         id: changes
         run: |
-          # Detectar cambios desde la rama remota main hasta el HEAD actual
           CHANGED_FILES=$(git diff --name-only origin/main...HEAD | tr '\n' ' ')
-          echo "Archivos modificados: $CHANGED_FILES"
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No se detectaron cambios relevantes."
+          fi
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+
+      - name: Generar archivo dev.json
+        run: |
+          cd @infra
+          mkdir -p config
+          echo '${{ secrets.DEV_CONFIG_JSON }}' > config/dev.json
 
       - name: Deploy CDK Stacks
         run: |
           echo "Archivos detectados para análisis: $CHANGED_FILES"
-
-          # Declaración de stacks y patrones relevantes
           declare -A STACKS
           STACKS["NetworkingStack"]="@infra/lib/stack/networking/"
           STACKS["DatabaseStack"]="@infra/lib/stack/database/"
@@ -65,13 +62,11 @@ jobs:
           STACKS["StatemachineStack"]="@infra/lib/stack/statemachines/"
           STACKS["MainStack"]="@infra/lib/stack/endpoints/ @infra/src/lambdas/authorizer/ @infra/lib/main-stack.ts"
 
-          # Iterar sobre cada stack
           for STACK_KEY in "${!STACKS[@]}"; do
             STACK_NAME="${PROJECT}-${STACK_KEY}"
             PATTERNS="${STACKS[$STACK_KEY]}"
             SHOULD_DEPLOY=false
 
-            # Si el stack no existe, se despliega siempre
             if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&1; then
               echo "Stack $STACK_NAME no existe. Marcando para despliegue."
               SHOULD_DEPLOY=true
@@ -88,7 +83,7 @@ jobs:
             if [ "$SHOULD_DEPLOY" = true ]; then
               echo "--- DESPLEGANDO ${STACK_NAME} ---"
               cd @infra
-              npx cdk deploy -e "$STACK_NAME" --require-approval never
+              npx cdk deploy "$STACK_NAME" --require-approval never
               if [ $? -ne 0 ]; then
                 echo "ERROR: Falló el despliegue de ${STACK_NAME}"
                 exit 1
@@ -98,12 +93,3 @@ jobs:
               echo "Sin cambios relevantes para $STACK_NAME. Omitiendo despliegue."
             fi
           done
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            @infra/node_modules
-            @infra/cdk.staging
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}

@@ -3,7 +3,6 @@ import * as cdk from "aws-cdk-lib";
 import { ConfigEnv } from "../config/config-env";
 import { MainStack } from "../lib/stack/endpoints/mainStack";
 
-import { pipelineStack } from "../lib/stack/pipelines/pipelineStack";
 import { CognitoStack } from "../lib/stack/cognito/cognitoStack";
 import { DynamoStack } from "../lib/stack/dynamo/dynamoStack";
 import { NetworkingStack } from "../lib/stack/networking/networkingStack";
@@ -204,26 +203,4 @@ new MainStack(app, `${vars.project}-MainStack`, {
   VoucherServiceLambda: voucherServiceStack.voucherServiceLambda,
   EventStatusSwitchTempServicesLambda: eventStatusSwitchTempServicesStack.eventStatusSwitchTempServicesLambda,
   arnLayerVersionJWT: layerAuthorizerVersion[baseProps.stage],
-});
-
-
-// ✅ Los pipelines pueden mantener env ya que no tienen cross-references
-new pipelineStack(app, `${vars.project}-pipelineStack`, {
-  ...baseProps,
-  repoName: "bigtree-asistencias-backend",
-  connectionArn: connectionArn[baseProps.stage],
-  repoOwner: 'TERRAWIND-DEVELOP',
-  repoBranch: branchName[baseProps.stage],
-  service: 'backend'
-});
-
-new pipelineStack(app, `${vars.project}-databasePipelineStack`, {
-  ...baseProps,
-  repoName: "bigtree-asistencias-database",
-  connectionArn: connectionArn[baseProps.stage],
-  repoOwner: 'TERRAWIND-DEVELOP',
-  repoBranch: branchName[baseProps.stage],
-  service: 'database',
-  vpc: vpc,
-  securityGroup: dbSg,
 });
