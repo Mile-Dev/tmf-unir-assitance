@@ -16,6 +16,8 @@ jobs:
       PROJECT: asistencia-viajero
       STAGE: dev
       AWS_REGION: us-west-1
+      AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+
         
     steps:
       - name: Checkout code
