@@ -32,6 +32,8 @@ published/
 **/bin/
 **/obj/
 !infra/bin/
+!@infra/bin/
+
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
