@@ -20,16 +20,18 @@
 x64/
 x86/
 bld/
-[Bb]in/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
 [Pp]ublish/
 [Pp]ublished/
-bin/
-obj/
 publish/
 published/
+
+# Excluir directorios bin EXCEPTO infra/bin
+**/bin/
+**/obj/
+!infra/bin/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
