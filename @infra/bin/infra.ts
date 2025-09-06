@@ -190,15 +190,6 @@ const eventStatusSwitchTempServicesStack =  new EventStatusSwitchTempServicesSta
   lambdaSg: lambdaSg,
 });
 
-const pythonLambdasStack = new PythonLambdasStack(app,`${vars.project}-lambda-PythonLambdasStack`, {
-  ...baseProps,
-  // ✅ Usar vpc y lambdaSg directamente (más simple)
-  vpc: vpc,
-  lambdaSg: lambdaSg,
-  userPoolId: cognitoStack.userPoolId,
-  arnLayerTrackingMok: layerTrackingVersion[baseProps.stage],
-  clientKomId: cognitoStack.clientKomId,
-});
 
 new MainStack(app, `${vars.project}-MainStack`, {
   userPool: cognitoStack.userPool,
@@ -212,21 +203,9 @@ new MainStack(app, `${vars.project}-MainStack`, {
   PhoneConsultationServiceLambda: phoneConsultationServiceStack.phoneConsultationServiceLambda,
   VoucherServiceLambda: voucherServiceStack.voucherServiceLambda,
   EventStatusSwitchTempServicesLambda: eventStatusSwitchTempServicesStack.eventStatusSwitchTempServicesLambda,
-  AssistancesLoggerWriterLambda: pythonLambdasStack.assistancesLoggerWriterLambda,
-  AssistancesLoggerWriterExternalLambda: pythonLambdasStack.assistancesLoggerWriterExternalLambda,
-  ListUsersLambda: pythonLambdasStack.ListUsersLambda,
   arnLayerVersionJWT: layerAuthorizerVersion[baseProps.stage],
 });
 
-const statemachineStack = new StatemachineStack(
-  app,
-  `${vars.project}-StatemachineStack`,
-  {
-    ...baseProps,
-    trackingMokServicesLambda: pythonLambdasStack.trackingMokServicesLambda,
-    SnsNotificationLambda: pythonLambdasStack.SnsNotificationLambda
-  }
-);
 
 // ✅ Los pipelines pueden mantener env ya que no tienen cross-references
 new pipelineStack(app, `${vars.project}-pipelineStack`, {

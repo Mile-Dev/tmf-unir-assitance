@@ -24,9 +24,6 @@ export interface MainStackProps extends cdk.StackProps {
   userPoolId: string;
   clientFrontendId: string;
   arnLayerVersionJWT: string;
-  AssistancesLoggerWriterLambda: lambda.IFunction;
-  AssistancesLoggerWriterExternalLambda: lambda.IFunction;
-  ListUsersLambda: lambda.IFunction;
 }
 
 export class MainStack extends Stack {
@@ -148,19 +145,7 @@ export class MainStack extends Stack {
     // Crear recurso /v1 una sola vez
     const v1Resource = api.root.addResource("v1");
 
-    // Crear recurso /v1/users
-    const usersResource = v1Resource.addResource("users");
-    usersResource.addMethod(
-      "GET",
-      new apigateway.LambdaIntegration(props.ListUsersLambda, {
-        proxy: true,
-      }),
-      {
-        authorizer: authorizerLambda,
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        apiKeyRequired: true,
-      }
-    );
+
 
     // Crear o reutilizar recurso /v1/assistances
     const assistancesResource = v1Resource.addResource("assistances");
@@ -179,37 +164,8 @@ export class MainStack extends Stack {
       }
     );
 
-    // Crear recurso log bajo /v1/assistances/log v2
-    const assistancesLog = assistancesResource.addResource("log");
-    assistancesLog.addMethod(
-      "ANY",
-      new apigateway.LambdaIntegration(props.AssistancesLoggerWriterLambda, {
-        proxy: true,
-      }),
-      {
-        authorizer: authorizerLambda,
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        apiKeyRequired: true,
-      }
-    );
 
-    // Crear recurso log bajo /v1/assistances/log-externals v2
-    const assistancesLogexternal =
-      assistancesResource.addResource("logs-externals");
-    assistancesLogexternal.addMethod(
-      "ANY",
-      new apigateway.LambdaIntegration(
-        props.AssistancesLoggerWriterExternalLambda,
-        {
-          proxy: true,
-        }
-      ),
-      {
-        authorizer: authorizerLambda,
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        apiKeyRequired: true,
-      }
-    );
+
 
     // Crear o reutilizar recurso /v1/masters
     const mastersResource = v1Resource.addResource("masters");
