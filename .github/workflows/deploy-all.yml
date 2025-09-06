@@ -1,0 +1,110 @@
+name: Deploy All Infra to AWS (Ordered)
+
+on:
+  workflow_dispatch:  
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-all:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: asistencia-viajero
+      STAGE: dev
+      AWS_REGION: us-west-1
+      AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          cd @infra
+          npm ci
+          npm install -g aws-cdk
+          cdk --version
+
+      - name: Install AWS CDK compatible version
+        run: |
+          npm install -g aws-cdk@2.1029.0
+          cdk --version
+
+      - name: Generar archivo dev.json
+        run: |
+          cd @infra
+          mkdir -p config
+          echo '${{ secrets.DEV_CONFIG_JSON }}' > config/dev.json
+
+      - name: Crear appsettings para Lambdas
+        run: |
+          mkdir -p MasterRdsServices
+          echo '${{ secrets.APPSETTINGS_MASTER_RDS_JSON }}' > MasterRdsServices/appsettings.dev.json
+
+          mkdir -p EventServices
+          echo '${{ secrets.APPSETTINGS_EVENT_JSON }}' > EventServices/appsettings.dev.json
+
+          mkdir -p PhoneConsultationService
+          echo '${{ secrets.APPSETTINGS_PHONE_JSON }}' > PhoneConsultationService/appsettings.dev.json
+
+          mkdir -p ProviderService
+          echo '${{ secrets.APPSETTINGS_PROVIDER_JSON }}' > ProviderService/appsettings.dev.json
+
+          mkdir -p TrackingMokServices
+          echo '${{ secrets.APPSETTINGS_TRACKING_JSON }}' > TrackingMokServices/appsettings.dev.json
+
+          mkdir -p VoucherService
+          echo '${{ secrets.APPSETTINGS_VOUCHER_JSON }}' > VoucherService/appsettings.dev.json
+
+          mkdir -p IssuanceMokServices
+          echo '${{ secrets.APPSETTINGS_ISSUANCE_JSON }}' > IssuanceMokServices/appsettings.dev.json
+
+          mkdir -p EventStatusSwitchTempServices
+          echo '${{ secrets.APPSETTINGS_EVENTTEMP_JSON }}' > EventStatusSwitchTempServices/appsettings.dev.json
+
+          mkdir -p EventFirstContactServices
+          echo '${{ secrets.APPSETTINGS_TRACKING_JSON }}' > EventFirstContactServices/appsettings.dev.json
+
+      - name: Deploy CDK Stacks (ordered)
+        run: |
+          cd @infra
+          echo "🚀 Desplegando TODOS los stacks en orden seguro..."
+
+          STACK_ORDER=(
+            "${PROJECT}-NetworkingStack"
+            "${PROJECT}-DatabaseStack"
+            "${PROJECT}-CognitoStack"
+            "${PROJECT}-WafStack"
+            "${PROJECT}-S3Stack"
+            "${PROJECT}-DynamoStack"
+            "${PROJECT}-LambdaLayersStack"
+            "${PROJECT}-StatemachineStack"
+            "${PROJECT}-MainStack"
+          )
+
+          for STACK in "${STACK_ORDER[@]}"; do
+            echo "--- DESPLEGANDO $STACK ---"
+            npx cdk deploy "$STACK" --require-approval never
+            if [ $? -ne 0 ]; then
+              echo "ERROR: Falló el despliegue de $STACK"
+              exit 1
+            fi
+          done
