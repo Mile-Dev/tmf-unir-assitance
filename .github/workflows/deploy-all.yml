@@ -90,14 +90,6 @@ jobs:
 
           STACK_ORDER=(
             "${PROJECT}-NetworkingStack"
-            "${PROJECT}-DatabaseStack"
-            "${PROJECT}-CognitoStack"
-            "${PROJECT}-WafStack"
-            "${PROJECT}-S3Stack"
-            "${PROJECT}-DynamoStack"
-            "${PROJECT}-LambdaLayersStack"
-            "${PROJECT}-StatemachineStack"
-            "${PROJECT}-MainStack"
           )
 
           for STACK in "${STACK_ORDER[@]}"; do
